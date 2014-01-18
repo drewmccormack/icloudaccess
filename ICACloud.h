@@ -27,8 +27,6 @@ typedef NS_ENUM(NSInteger, ICAErrorCode) {
 - (instancetype)initWithUbiquityContainerIdentifier:(NSString *)newIdentifier;
 - (instancetype)initWithUbiquityContainerIdentifier:(NSString *)newIdentifier rootDirectoryPath:(NSString *)newPath;
 
-- (void)connect:(void(^)(NSError *error))completion;
-
 - (void)fileExistsAtPath:(NSString *)path completion:(void(^)(BOOL exists, BOOL isDirectory, NSError *error))block;
 
 - (void)createDirectoryAtPath:(NSString *)path completion:(void(^)(NSError *error))block;

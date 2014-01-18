@@ -248,6 +248,7 @@ NSString *ICAErrorDomain = @"ICAErrorDomain";
         [strongSelf stopMonitoring];
         [strongSelf willChangeValueForKey:@"identityToken"];
         [strongSelf didChangeValueForKey:@"identityToken"];
+        [self connect];
     }];
 }
 
@@ -258,14 +259,10 @@ NSString *ICAErrorDomain = @"ICAErrorDomain";
     return fileManager.ubiquityIdentityToken != nil;
 }
 
-- (void)connect:(void(^)(NSError *error))completion
+- (void)connect
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        BOOL loggedIn = fileManager.ubiquityIdentityToken != nil;
-        NSError *error = loggedIn ? nil : [NSError errorWithDomain:ICAErrorDomain code:ICAErrorCodeAuthenticationFailure userInfo:@{NSLocalizedDescriptionKey : NSLocalizedString(@"User is not logged into iCloud.", @"")} ];
-        if (loggedIn) [self performInitialPreparation:NULL];
-        if (completion) completion(error);
-    });
+    BOOL loggedIn = fileManager.ubiquityIdentityToken != nil;
+    if (loggedIn) [self performInitialPreparation:NULL];
 }
 
 #pragma mark - Metadata Query to download new files
