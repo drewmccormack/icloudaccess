@@ -317,7 +317,10 @@ NSString *ICAErrorDomain = @"ICAErrorDomain";
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
     for ( NSUInteger i = 0; i < count; i++ ) {
         @autoreleasepool {
-            NSURL *url = [metadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+            NSMetadataItem *item = [metadataQuery resultAtIndex:i];
+            [self resolveConflictsForMetadataItem:item];
+            
+            NSURL *url = [item valueForAttribute:NSMetadataItemURLKey];
             dispatch_async(queue, ^{
                 NSError *error;
                 [fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
@@ -326,6 +329,39 @@ NSString *ICAErrorDomain = @"ICAErrorDomain";
     }
 
     [metadataQuery enableUpdates];
+}
+
+- (void)resolveConflictsForMetadataItem:(NSMetadataItem *)item
+{
+    NSURL *fileURL = [item valueForAttribute:NSMetadataItemURLKey];
+    BOOL inConflict = [[item valueForAttribute:NSMetadataUbiquitousItemHasUnresolvedConflictsKey] boolValue];
+    if (inConflict) {
+        NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+
+        __block BOOL coordinatorExecuted = NO;
+        __block BOOL timedOut = NO;
+
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, ICAFileCoordinatorTimeOut * NSEC_PER_SEC);
+        dispatch_after(popTime, timeOutQueue, ^{
+            if (!coordinatorExecuted) {
+                timedOut = YES;
+                [coordinator cancel];
+            }
+        });
+        
+        NSError *coordinatorError = nil;
+        [coordinator coordinateWritingItemAtURL:fileURL options:NSFileCoordinatorWritingForDeleting error:&coordinatorError byAccessor:^(NSURL *newURL) {
+            dispatch_sync(timeOutQueue, ^{ coordinatorExecuted = YES; });
+            if (timedOut) return;
+            [NSFileVersion removeOtherVersionsOfItemAtURL:newURL error:nil];
+        }];
+        if (timedOut || coordinatorError) return;
+        
+        NSArray *conflictVersions = [NSFileVersion unresolvedConflictVersionsOfItemAtURL:fileURL];
+        for (NSFileVersion *fileVersion in conflictVersions) {
+            fileVersion.resolved = YES;
+        }
+    }
 }
 
 #pragma mark - File Operations
