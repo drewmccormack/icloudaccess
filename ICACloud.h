@@ -37,4 +37,7 @@ typedef NS_ENUM(NSInteger, ICAErrorCode) {
 - (void)uploadLocalFile:(NSString *)fromPath toPath:(NSString *)toPath completion:(void(^)(NSError *error))block;
 - (void)downloadFromPath:(NSString *)fromPath toLocalFile:(NSString *)toPath completion:(void(^)(NSError *error))block;
 
+- (void)uploadData:(NSData *)data toPath:(NSString *)toPath completion:(void(^)(NSError *error))block;
+- (void)downloadDataFromPath:(NSString *)fromPath completion:(void(^)(NSData *data, NSError *error))block;
+
 @end

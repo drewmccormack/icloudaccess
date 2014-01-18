@@ -536,6 +536,34 @@ static const NSTimeInterval ICAFileCoordinatorTimeOut = 10.0;
     }];
 }
 
+- (NSString *)temporaryDirectory
+{
+    static NSString *tempDir = nil;
+    if (!tempDir) {
+        tempDir = [NSTemporaryDirectory() stringByAppendingString:@"ICACloudTempFiles"];
+        BOOL isDir;
+        if (![fileManager fileExistsAtPath:tempDir isDirectory:&isDir] || !isDir) {
+            NSError *error;
+            [fileManager removeItemAtPath:tempDir error:NULL];
+            if (![fileManager createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:&error]) {
+                tempDir = nil;
+                NSLog(@"Error creating temp dir for ICACloud: %@", error);
+            }
+        }
+    }
+    return tempDir;
+}
+
+- (void)uploadData:(NSData *)data toPath:(NSString *)toPath completion:(void(^)(NSError *error))completion
+{
+    NSString *tempFile = [[self temporaryDirectory] stringByAppendingPathComponent:[[NSProcessInfo processInfo] globallyUniqueString]];
+    [data writeToFile:tempFile atomically:NO];
+    [self uploadLocalFile:tempFile toPath:toPath completion:^(NSError *error) {
+        [fileManager removeItemAtPath:tempFile error:NULL];
+        if (completion) completion(error);
+    }];
+}
+
 - (void)uploadLocalFile:(NSString *)fromPath toPath:(NSString *)toPath completion:(void(^)(NSError *error))block
 {
     [operationQueue addOperationWithBlock:^{
@@ -577,6 +605,18 @@ static const NSTimeInterval ICAFileCoordinatorTimeOut = 10.0;
         });
     }];
 }
+
+- (void)downloadDataFromPath:(NSString *)fromPath completion:(void(^)(NSData *data, NSError *error))completion
+{
+    NSString *tempFile = [[self temporaryDirectory] stringByAppendingPathComponent:[[NSProcessInfo processInfo] globallyUniqueString]];
+    [self downloadFromPath:fromPath toLocalFile:tempFile completion:^(NSError *error) {
+        NSData *data = nil;
+        if (!error) data = [NSData dataWithContentsOfFile:tempFile];
+        [fileManager removeItemAtPath:tempFile error:NULL];
+        if (completion) completion(data, error);
+    }];
+}
+
 
 - (void)downloadFromPath:(NSString *)fromPath toLocalFile:(NSString *)toPath completion:(void(^)(NSError *error))block
 {
