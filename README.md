@@ -17,16 +17,23 @@ The methods of the class are fairly self explanatory, mirroring `NSFileManager` 
 
 Cloud paths are relative to the ubiquity container, but you can optionally supply a relative path to a root directory in the container. This directory, and intermediate directories, will be created automatically if they don't exist.
 
+You should check the `isConnected` property to make sure the user is logged into iCloud before using the class.
+
 Here is a simple example of using the `ICACloud` class.
 
-  cloud = [[ICACloud alloc] initWithUbiquityContainerIdentifier:@"XXXXXXXXXX.com.mycompany.cloudtest" rootDirectoryPath:@"Path/To/Data/Root"];
-  [cloud createDirectoryAtPath:@"Subdirectory" completion:^(NSError *error) {
-      if (error) {
-          NSLog(@"Failed to create subdirectory");
-          return;
-      }
-    
-      [cloud uploadLocalFile:@"/Users/me/Downloads/LocalImage.png" toPath:@"Subdirectory/CloudImage.png" completion:^(NSError *error) {
-          if (error) NSLog(@"Failed to upload: %@", error);
+    ICACloud *cloud = [[ICACloud alloc] initWithUbiquityContainerIdentifier:@"XXXXXXXXXX.com.mycompany.cloudtest"
+        rootDirectoryPath:@"Path/To/Data/Root"];
+    if (cloud.isConnected) {
+        [cloud createDirectoryAtPath:@"Subdirectory" completion:^(NSError *error) {
+            if (error) {
+              NSLog(@"Failed to create subdirectory");
+              return;
+            }
+            
+            [cloud uploadLocalFile:@"/Users/me/Downloads/LocalImage.png" 
+              toPath:@"Subdirectory/CloudImage.png" 
+              completion:^(NSError *error) {
+              if (error) NSLog(@"Failed to upload: %@", error);
+          }];
       }];
-  }];
+    }
