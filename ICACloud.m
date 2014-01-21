@@ -12,36 +12,12 @@ NSString *ICAException = @"ICAException";
 NSString *ICAErrorDomain = @"ICAErrorDomain";
 
 
-@interface ICACloudDirectory : NSObject
 
-@property (copy) NSString *path;
-@property (copy) NSArray *contents;
-@property (copy) NSString *name;
+@interface ICACloudFile ()
 
-@end
-
-
-@interface ICACloudFile : NSObject <NSCoding, NSCopying>
-
-@property (copy) NSString *path;
-@property (copy) NSString *name;
-@property unsigned long long size;
-
-@end
-
-
-@implementation ICACloudDirectory
-
-- (NSString *)description
-{
-    NSMutableString *result = [NSMutableString string];
-    [result appendFormat:@"%@\r", super.description];
-    NSArray *keys = @[@"path", @"name", @"contents"];
-    for (NSString *key in keys) {
-        [result appendFormat:@"%@: %@; \r", key, [[self valueForKey:key] description]];
-    }
-    return result;
-}
+@property (readwrite, copy) NSString *path;
+@property (readwrite, copy) NSString *name;
+@property (readwrite) NSDictionary *fileAttributes;
 
 @end
 
@@ -50,46 +26,7 @@ NSString *ICAErrorDomain = @"ICAErrorDomain";
 
 @synthesize path = path;
 @synthesize name = name;
-@synthesize size = size;
-
-- (instancetype)initWithCoder:(NSCoder *)aDecoder
-{
-    self = [super init];
-    if (self) {
-        path = [aDecoder decodeObjectForKey:@"file"];
-        name = [aDecoder decodeObjectForKey:@"name"];
-        size = [[aDecoder decodeObjectForKey:@"sizeNumber"] unsignedLongLongValue];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)aCoder
-{
-    [aCoder encodeInteger:0 forKey:@"classVersion"];
-    [aCoder encodeObject:path forKey:@"path"];
-    [aCoder encodeObject:name forKey:@"name"];
-    [aCoder encodeObject:[NSNumber numberWithUnsignedLongLong:size] forKey:@"sizeNumber"];
-}
-
-- (id)copyWithZone:(NSZone *)zone
-{
-    ICACloudFile *copy = [ICACloudFile new];
-    copy->path = [self->path copy];
-    copy->name = [self->name copy];
-    copy->size = self->size;
-    return copy;
-}
-
-- (NSString *)description
-{
-    NSMutableString *result = [NSMutableString string];
-    [result appendFormat:@"%@\r", super.description];
-    NSArray *keys = @[@"path", @"name", @"size"];
-    for (NSString *key in keys) {
-        [result appendFormat:@"%@: %@; \r", key, [[self valueForKey:key] description]];
-    }
-    return result;
-}
+@synthesize fileAttributes = fileAttributes;
 
 @end
 
@@ -461,22 +398,16 @@ static const NSTimeInterval ICAFileCoordinatorTimeOut = 10.0;
             NSString *filename;
             NSMutableArray *mutableContents = [[NSMutableArray alloc] init];
             while ((filename = [dirEnum nextObject])) {
-                if ([filename hasPrefix:@"."]) continue; // Skip .DS_Store and other system files
-                NSString *filePath = [path stringByAppendingPathComponent:filename];
+                if ([@[@".DS_Store", @".", @".."] containsObject:filename]) continue;
+                
+                ICACloudFile *file = [ICACloudFile new];
+                file.name = filename;
+                file.path = [path stringByAppendingPathComponent:filename];;
+                file.fileAttributes = [dirEnum.fileAttributes copy];
+                [mutableContents addObject:file];
+                
                 if ([dirEnum.fileAttributes.fileType isEqualToString:NSFileTypeDirectory]) {
                     [dirEnum skipDescendants];
-                    
-                    ICACloudDirectory *dir = [[ICACloudDirectory alloc] init];
-                    dir.name = filename;
-                    dir.path = filePath;
-                    [mutableContents addObject:dir];
-                }
-                else {
-                    ICACloudFile *file = [ICACloudFile new];
-                    file.name = filename;
-                    file.path = filePath;
-                    file.size = dirEnum.fileAttributes.fileSize;
-                    [mutableContents addObject:file];
                 }
             }
             

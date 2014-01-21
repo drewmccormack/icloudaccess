@@ -18,6 +18,16 @@ typedef NS_ENUM(NSInteger, ICAErrorCode) {
     ICAErrorCodeConnectionError             = 103
 };
 
+
+@interface ICACloudFile : NSObject
+
+@property (readonly, copy) NSString *path;
+@property (readonly, copy) NSString *name;
+@property (readonly) NSDictionary *fileAttributes;
+
+@end
+
+
 @interface ICACloud : NSObject
 
 @property (nonatomic, assign, readonly) BOOL isConnected;
